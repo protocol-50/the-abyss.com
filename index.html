@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>THE ABYSS - 深層心理極秘診断レポート</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --accent-color: #aa0000;
+            --text-color: #d0d0d0;
+            --card-bg: rgba(10, 10, 10, 0.98);
+            --border-color: #333;
+            --glitch-speed: 0.2s;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', 'Helvetica Neue', 'Arial', 'Hiragino Sans', 'Meiryo', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* 修正：画面中央に配置 */
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 走査線・ノイズオーバーレイ */
+        body::before {
+            content: " ";
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            z-index: 5000;
+            background-size: 100% 4px;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        #app { width: 95%; max-width: 800px; z-index: 10; padding: 40px 0; }
+        
+        .screen { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            padding: 40px; 
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.9); 
+            position: relative;
+            box-sizing: border-box;
+            transition: opacity 0.5s ease;
+        }
+
+        /* グリッチアニメーション */
+        @keyframes glitch {
+            0% { transform: translate(0); text-shadow: -2px 0 red, 2px 0 blue; }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        h1 { 
+            color: var(--accent-color); 
+            text-align: center; 
+            letter-spacing: 15px; 
+            font-size: 2.5rem; 
+            margin-bottom: 10px; 
+            text-shadow: 0 0 15px rgba(170, 0, 0, 0.6);
+            animation: glitch 5s infinite;
+        }
+        
+        /* プログレスバー */
+        .progress-container {
+            width: 100%;
+            height: 2px;
+            background: #111;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        /* 質問画面の要素 */
+        .q-header { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .q-number { font-size: 0.8rem; color: var(--accent-color); letter-spacing: 2px; }
+        .question-text { font-size: 1.2rem; line-height: 2; min-height: 140px; margin-bottom: 40px; color: #eee; }
+
+        .btn-container { display: flex; gap: 20px; }
+        button { 
+            flex: 1; background: transparent; color: #aaa; border: 1px solid #444; 
+            padding: 20px; cursor: pointer; font-family: inherit; font-size: 1rem; 
+            transition: 0.2s; letter-spacing: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        button:hover { color: #fff; border-color: var(--accent-color); background: rgba(170,0,0,0.15); box-shadow: 0 0 15px rgba(170,0,0,0.2); }
+        button:active { transform: scale(0.98); }
+
+        /* 外側に配置するリロードボタン */
+        .reload-outer-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .reload-btn {
+            background: transparent;
+            color: #555;
+            border: 1px solid #222;
+            padding: 10px 20px;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            cursor: pointer;
+            width: auto;
+            flex: none;
+        }
+        .reload-btn:hover { color: var(--accent-color); border-color: var(--accent-color); }
+
+        /* 結果画面のデザイン */
+        .destroy-note {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--accent-color);
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            border-top: 1px solid var(--accent-color);
+            border-bottom: 1px solid var(--accent-color);
+            padding: 12px 0;
+            font-weight: bold;
+            background: rgba(170, 0, 0, 0.05);
+        }
+
+        .evidence-frame {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #000;
+            margin-bottom: 30px;
+            border: 1px solid #444;
+            overflow: hidden;
+        }
+        .scan-line {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: rgba(255, 0, 0, 0.7);
+            box-shadow: 0 0 15px red;
+            animation: scanning 4s linear infinite;
+            z-index: 5;
+        }
+        @keyframes scanning { 0% { top: 0%; } 100% { top: 100%; } }
+
+        .result-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.3) brightness(0.8); opacity: 0.6; transition: 1s; }
+        .type-title { font-size: 2.8rem; color: var(--accent-color); text-align: center; margin: 0; font-weight: bold; letter-spacing: 10px; text-shadow: 0 0 20px rgba(170,0,0,0.4); }
+        .type-subtitle { text-align: center; color: #888; font-size: 1rem; margin-bottom: 40px; letter-spacing: 2px; font-style: italic; }
+
+        /* 闇の構成比グラフ用スタイル */
+        .chart-container { margin-top: 40px; margin-bottom: 20px; }
+        .chart-row { margin-bottom: 15px; }
+        .chart-label-group { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.75rem; letter-spacing: 2px; color: #888; }
+        .chart-bar-bg { width: 100%; height: 8px; background: #111; border: 1px solid #222; position: relative; }
+        .chart-bar-fill { height: 100%; background: var(--accent-color); width: 0%; transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1); box-shadow: 0 0 10px rgba(170, 0, 0, 0.5); }
+
+        .section-title { 
+            border-left: 4px solid var(--accent-color); 
+            padding-left: 15px; margin-top: 35px; margin-bottom: 15px;
+            font-weight: bold; font-size: 1rem; color: #fff; letter-spacing: 2px;
+        }
+        .section-content { font-size: 0.95rem; line-height: 1.8; color: #bbb; text-align: justify; margin-bottom: 20px; }
+
+  
+　　　　/* 警告：恐怖感を煽るデザイン */
+        .warning-box {
+            border: 1px solid var(--accent-color);
+            padding: 25px;
+            margin: 40px 0;
+            background: rgba(30, 0, 0, 0.3);
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(170, 0, 0, 0.2);
+        }
+        .warning-box::before {
+            content: "CRITICAL WARNING / SYSTEM INTERFERENCE";
+            display: block;
+            font-size: 0.6rem;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--accent-color);
+            padding-bottom: 5px;
+        }
+        .warning-text { 
+            color: #ff4444; 
+            font-size: 1rem; 
+            font-weight: bold;
+            line-height: 1.6; 
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        /* 最終レポート：項目分けとデザインの両立 */
+        .final-report-container {
+            margin-top: 50px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            text-align: left;
+        }
+        .report-header {
+            background: #1a1a1a;
+            padding: 10px;
+            font-size: 0.7rem;
+            color: #666;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #333;
+        }
+        .report-body { padding: 20px; }
+        .status-item {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted #222;
+            padding-bottom: 5px;
+        }
+        .status-label { color: #555; font-size: 0.75rem; }
+        .status-value { color: var(--accent-color); font-weight: bold; }
+        .final-comment-box {
+            margin-top: 20px;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #888;
+            text-align: center;
+            border-top: 1px solid var(--accent-color);
+            background: linear-gradient(to bottom, rgba(170,0,0,0.1), transparent);
+        }
+
+        /* シェアボタン */
+        .share-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #333;
+        }
+        .share-btn { font-size: 0.8rem; padding: 12px; }
+        .btn-x { border-color: #555; color: #fff; }
+        .btn-copy { border-color: #555; color: #fff; }
+
+        .hidden { display: none !important; }
+        
+        #loading-msg { text-align: center; color: var(--accent-color); letter-spacing: 5px; margin-top: 25px; font-weight: bold; }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .screen { padding: 25px; }
+            .type-title { font-size: 1.8rem; letter-spacing: 5px; }
+            .btn-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 修正：BGMを相対パスに変更 -->
+<audio id="bgm" loop>
+    <source src="bgm.mp3" type="audio/mpeg">
+</audio>
+
+<div id="app">
+    <!-- スタート画面 -->
+    <div id="start-screen" class="screen">
+        <div id="project-id" style="text-align: center; font-size: 0.7rem; color: #555; margin-bottom: 20px; letter-spacing: 4px;">PROJECT ID: ABYSS-2026</div>
+        <h1>THE ABYSS</h1>
+        <p style="text-align: center; color: #888; margin-bottom: 40px; line-height: 2; font-size: 0.9rem;">
+            この診断は、あなたの社会的仮面の裏に潜む<br>
+            「真の属性」を暴き出すためのプロトコルです。<br>
+            50の問いに対し、偽りなく応答してください。
+        </p>
+        <button onclick="startQuiz()" style="width: 100%; border-color: var(--accent-color); color: #fff;">システムを起動する</button>
+    </div>
+
+    <!-- 質問画面 -->
+    <div id="quiz-screen" class="screen hidden">
+        <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
+        <div class="q-header">
+            <div class="q-number" id="q-number">PROTOCOL NO. 01</div>
+            <div style="font-size: 0.6rem; color: #555;">ENCRYPTED SESSION</div>
+        </div>
+        <div class="question-text" id="q-text"></div>
+        <div class="btn-container">
+            <button onclick="handleAnswer(true)">YES</button>
+            <button onclick="handleAnswer(false)">NO</button>
+        </div>
+    </div>
+
+    <!-- 質問中のみ表示される外側のリロードボタン -->
+    <div id="reload-container" class="reload-outer-container hidden">
+        <button class="reload-btn" onclick="typeWriter()">[ RELOAD TEXT ]</button>
+    </div>
+
+    <!-- ローディング画面 -->
+    <div id="loading-screen" class="screen hidden">
+        <div style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div style="width: 50px; height: 50px; border: 2px solid #222; border-top-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <div id="loading-msg">ANALYZING PSYCHE...</div>
+        </div>
+    </div>
+
+    <!-- 結果画面 -->
+    <div id="result-screen" class="screen hidden">
+        <div class="destroy-note">CONFIDENTIAL: 閲覧後は本ページを破棄してください</div>
+        
+        <div class="evidence-frame">
+            <div class="scan-line"></div>
+            <img id="res-img" class="result-img" src="" alt="Evidence">
+        </div>
+
+        <div id="res-type" class="type-title"></div>
+        <div id="res-catch" class="type-subtitle"></div>
+
+        <!-- 追加：「あなたの闇の構成比」グラフ -->
+        <div class="section-title">■ あなたの闇の構成比 (COMPOSITION)</div>
+        <div class="chart-container" id="darkness-chart">
+            <div class="chart-row">
+                <div class="chart-label-group"><span>冷酷さ (EMPATHY GAP)</span><span id="score-E">0%</span></div>
+                <div class="chart-bar-bg"><div id="bar-E" class="chart-bar-fill"></div></div>
+            </div>
+            <div class="chart-row">
+                <div class="chart-label-group"><span>狡猾さ (MACHIAVELLIANISM)</span><span id="score-M">0%</span></div>
+                <div class="chart-bar-bg"><div id="bar-M" class="chart-bar-fill"></div></div>
+            </div>
+            <div class="chart-row">
+                <div class="chart-label-group"><span>支配欲 (DOMINATION)</span><span id="score-D">0%</span></div>
+                <div class="chart-bar-bg"><div id="bar-D" class="chart-bar-fill"></div></div>
+            </div>
+            <div class="chart-row">
+                <div class="chart-label-group"><span>破壊衝動 (CHAOS)</span><span id="score-C">0%</span></div>
+                <div class="chart-bar-bg"><div id="bar-C" class="chart-bar-fill"></div></div>
+            </div>
+            <div class="chart-row">
+                <div class="chart-label-group"><span>自己隠匿 (STEALTH)</span><span id="score-S">0%</span></div>
+                <div class="chart-bar-bg"><div id="bar-S" class="chart-bar-fill"></div></div>
+            </div>
+        </div>
+
+        <div class="section-title">■ 深層心理の核心 (CORE)</div>
+        <div id="res-core" class="section-content"></div>
+
+        <div class="section-title">■ 社会的仮面 (PERSONA)</div>
+        <div id="res-persona" class="section-content"></div>
+
+        <div class="section-title">■ 対人関係の流儀 (RELATION)</div>
+        <div id="res-relation" class="section-content"></div>
+
+        <div class="section-title">■ 破滅へのトリガー (RISK)</div>
+        <div id="res-risk" class="section-content"></div>
+
+        <!-- 修正：診断結果下部の最終メッセージを追加 -->
+    　　<!-- 警告文エリア -->
+        <div class="warning-box">
+            <div id="abyss-warning" class="warning-text"></div>
+        </div>
+
+    <!-- 最終解析レポートエリア -->
+        <div class="final-report-container">
+            <div class="report-header">FINAL ANALYSIS REPORT</div>
+            <div class="report-body">
+                <div class="status-item">
+                    <span class="status-label">SUBJECT ATTRIBUTE:</span>
+                    <span id="final-type-name" class="status-value"></span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">ENCOUNTER RATE:</span>
+                    <span id="final-ratio" class="status-value"></span>
+                </div>
+                <!-- タイプ別の解説メッセージ -->
+                <div id="final-special-msg" style="font-size: 0.85rem; color: #bbb; line-height: 1.6; margin-top:10px;"></div>
+            </div>
+            
+            <!-- 【ここを変更】締めのメッセージ -->
+            <div class="final-comment-box" style="text-align: left; line-height: 1.8; color: #ccc;">
+                診断お疲れ様でした。あなたが直視したその姿は、社会があなたに押し付けた「善人」という化けの皮を剥ぎ取った、魂の原型です。<br><br>
+                このアビス（深淵）が示したのは、あなたが窮地に立たされた時に発動する「真の生存戦略」に他なりません。悪と呼ばれようと、闇と呼ばれようと、それはあなたがこの残酷な世界を生き抜くために獲得した最強の武器なのです。<br><br>
+                さあ、その特別な「牙」を持って、外の世界に戻りなさい。
+            </div>
+        </div>
+
+        <div class="share-container">
+            <button class="share-btn btn-x" onclick="shareX()">Xで報告</button>
+            <button class="share-btn btn-copy" onclick="copyLink()">URLをコピー</button>
+        </div>
+
+        <button onclick="location.reload()" style="width: 100%; margin-top: 30px; font-size: 0.8rem; border-color: #222;">記録を抹消して終了</button>
+    </div>
+</div>
+
+<script>
+　　// 自動ID生成用スクリプト
+    window.addEventListener('DOMContentLoaded', () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const calcId = (year * 20) + (month * 30) + (day * 100);
+        const displayDiv = document.getElementById('project-id');
+        if (displayDiv) {
+            displayDiv.innerText = "PROJECT ID: ABYSS-" + calcId;
+        }
+    });
+    
+    // 診断データ
+    const typeData = {
+        "MS": { 
+            name: "情報詐欺師", 
+            ratio: "出現率 12.5%", 
+            isRare: false, 
+            specialMsg: "世界の約8人に1人がこのタイプです。", 
+            catch: "「真実とは、最も巧妙に編まれた嘘の別称に過ぎない。」", 
+            core: "あなたは事実という無機質な粘土を使い、他者が喉から手が出るほど欲しがる『心地よい幻想』を造り上げる天才です。状況を瞬時に俯瞰し、どの情報を隠し、どの情報を強調すれば人々が自分の思い通りに動くかを本能的に理解しています。あなたにとって真実かどうかは些末な問題であり、重要なのはそれが『機能するかどうか』だけです。", 
+            persona: "非常に知的で洗練された、魅力的な人物を演じます。誰からも信頼され、相談役として重宝されることも多いでしょう。しかし、その穏やかな微笑みの裏側には、常に損得と確率を弾き出す冷徹な計算機が静かに鎮座しています。", 
+            relation: "対人関係は、相手を「自分の駒として依存させる」か、あるいは「一時的に利用する」かの二択です。他者への深い愛着は、あなたの判断を狂わせる戦略的な脆弱性とみなされます。恩義を売ることで、見えない負債を相手に背負わせるのが得意です。", 
+            career: "戦略コンサルタント、カリスマ的扇動家、影の黒幕、広報・プロパガンダ担当。", 
+            risk: "他人に合わせて最適な嘘を重ねすぎた結果、自分自身の本当の欲望や声さえもが、誰かからの借り物のように感じられる深刻な自己喪失に陥るリスクがあります。",
+            img: "images/MS.jpg"
+        },
+     
+        "ED": { 
+            name: "評判の暗殺者", 
+            ratio: "出現率 8.5%", 
+            isRare: false, 
+            specialMsg: "このタイプは人口のわずか8%程度。選ばれたリーダーのみが持つ資質です。", 
+            catch: "「正義という名の剣は、抜く前に相手を殺している。」", 
+            core: "他者の小さな綻びや過去の過ちを見逃さない、冷酷な審判者としての本性を持っています。暴力ではなく、『正論』や『倫理』、そして『評判』という目に見えない武器を使い、社会的な死を与えることに長けています。あなたが振りかざす正義は、相手を屈服させるための最も効率的な手段です。", 
+            persona: "「公平無私」で「規律を重んじる」高潔な人物を体現します。周囲からは頼れるリーダーと見なされますが、実際は獲物の弱点やスキャンダルを収集し、抹殺の機会を静かに伺うハンターのような存在です。", 
+            relation: "周囲の人間を常に監視し、密かにランク付けしています。一度「敵」あるいは「不要な存在」と見なした相手に対しては、一切の慈悲を見せず、外堀から埋めるように冷徹に排除します。対等な友情よりも、服従か排除を好みます。", 
+            career: "内部監査人、検察官、辛辣な批評家、コンプライアンス責任者。", 
+            risk: "自ら定めた『完璧なルール』という名の監獄に自ら閉じ込められ、他人の自由や不完全さを一切許容できなくなり、最終的に孤立を招く恐れがあります。",
+            img: "images/ED.jpg"
+        },
+     
+        "MC": { 
+            name: "思考の海賊", 
+            ratio: "出現率 4.5%", 
+            isRare: false, 
+            specialMsg: "人口のわずか4.5%の稀有な思考形態。", 
+            catch: "「あなたの記憶も、あなたの思想も、元は私の持ち物だ。」", 
+            core: "他者が心血を注いで生み出した独創的なアイデアや思想を、さも自分がゼロから生み出したかのように吸収し、自らの血肉とする精神的略奪者です。サンプリングと再構築の天才であり、オリジナルの持ち主よりも魅力的にその価値をプレゼンする能力に長けています。", 
+            persona: "自由奔放で天才肌、エキcentricな芸術家を装います。借り物の言葉や思想を、さも自分の魂の叫びであるかのように劇的に演出することで、周囲の注目と賞賛を一身に集めます。", 
+            relation: "他者の才能を徹底的に搾取する関係を築きます。利用価値があるうちは最大限の賞賛を与えますが、相手からすべてのアイデアを吸い尽くした後は、二度と視線を向けることはありません。", 
+            career: "クリエイティブ・ディレクター、煽動家、トレンドセッター、ベンチャー投資家。", 
+            risk: "内面は常に空虚であり、真の独創性を突きつけられた際、激しい劣等感と恐怖で自己が崩壊する危険性を秘めています。", 
+            img: "images/MC.jpg"
+        },
+     
+        "SE": { 
+            name: "見えない窃盗犯", 
+            ratio: "最高難易度 出現率 3.5%", 
+            isRare: false, 
+            specialMsg: "1000人集まっても35人程度。あなたの観察眼はもはや特殊技能の域です。", 
+            catch: "「失ったことさえ気づかないうちに、すべては私の手の中にある。」", 
+            core: "静寂の中に潜み、他者が大切にしている機会や情報、あるいは寵愛を、気づかれぬうちに奪い去る潜伏型の捕食者です。あなたは「直接対決」を好みません。相手が油断した瞬間に、背後から音もなくすべてをさらい取ることに無上の悦びを感じます。", 
+            persona: "目立たず、害のない、善良で控えめな人間を完璧に演じます。空気のように存在感を消して集団に溶け込み、誰からも警戒されることなく重要機密や他人の弱点を吸収し続けます。", 
+            relation: "誰とも深く関わらないように見せつつ、実は全員の弱みを握っています。信頼という名の心の鍵を開け、情報を持ち出す技術に長けていますが、自分自身の心の内を見せることは万に一つもありません。", 
+            career: "諜報員、情報仲介人、裏社会の会計士、セキュリティ・アナリスト。", 
+            risk: "誰からも真の意味で認識されない究極の孤独に陥り、自分が本当に存在しているのか確信が持てなくなる、透明な幽霊のような恐怖に苛まれることがあります。", 
+            img: "images/SE.jpg"
+        },
+     
+        "DS": { 
+            name: "深淵の独裁者", 
+            ratio: "出現率 6.0%", 
+            isRare: false, 
+            specialMsg: "出現率は6%。強固な意思と支配力を秘めた、数少ない統治者のプロファイルです。", 
+            catch: "「自由とは、私に従うという選択肢のことだ。」", 
+            core: "目に見えない心理的な糸を使い、大衆を意のままに操る影の統治者です。物理的な強制力よりも、相手の自尊心を削り「自分にはこの人しかいない」と思わせる、恐怖と依存を絶妙にブレンドした精神的支配体制を築くことを好みます。", 
+            persona: "圧倒的な威風堂々としたリーダーシップを発揮します。迷える人々に明快な答えを与える救世主のように振る舞いますが、その真の目的は、他者の自己決定権を奪い、自分の手足として機能させることにあります。", 
+            relation: "完全なる縦の関係、すなわち「主従」を求めます。対等な友人やパートナーシップは、あなたにとって反逆の予兆であり、不確実なリスクでしかありません。常に自分が優位に立てる相手を選んで周囲を固めます。", 
+            career: "独裁的な経営者、カルト的政治家、宗教指導者、絶対的プロデューサー。", 
+            risk: "誰も心から信じることができない深い疑心暗鬼の中で、自らが築き上げた巨大な帝国の重みと孤独に押し潰されるリスクがあります。", 
+            img: "images/DS.jpg"
+        },
+     
+        "CD": { 
+            name: "扇動の放火魔", 
+            ratio: "出現率 4.0%", 
+            isRare: false, 
+            specialMsg: "出現率は約4%。現状を打破する強烈なエネルギーは、革命の火種そのものです。", 
+            catch: "「燃え上がる街を眺める時、世界は初めて一つの意思になる。」", 
+            core: "退屈で平穏な社会に耐えられず、あえて物議を醸す火種を投げ込み、大炎上する様を特等席で眺める破壊の演出家です。対立を煽り、人々の憎悪や熱狂を加速させることで、既存の秩序を瓦解させるプロセスに快感を覚えます。", 
+            persona: "情熱的なヒーロー、あるいは旧弊を打ち破る革命家として表舞台に現れます。しかし、その内実にあるのは理想社会の建設ではなく、単なる「燃え上がるカオス」への純粋な好奇心と破壊衝動です。", 
+            relation: "共通の敵を作り出すことで人々を結束させ、最後に自分だけが安全な場所へ生き残るよう冷徹に仕向けます。人間関係を使い捨ての「燃料」程度にしか考えていません。", 
+            career: "過激派活動家、ネット炎上の仕掛け人、革命家、ショック・ドクトリンの推進者。", 
+            risk: "自ら放った火がコントロールを失い、逃げ場のない場所で自分自身を焼き尽くしてしまう致命的なリスクを常に抱えています。", 
+            img: "images/CD.jpg"
+        },
+     
+        "SM": { 
+            name: "仮面の偽造師", 
+            ratio: "出現率 14.0%", 
+            isRare: false, 
+            specialMsg: "全人口の14%に該当。高い社会性を持ち、周囲と摩擦なく目的を遂げる理知的なタイプ。", 
+            catch: "「本物の私？ それは今、あなたが鏡で見ている顔のことだ。」", 
+            core: "対面する相手が潜在的に「見たい」と願っている人格を、鏡のように反射して演じ分ける魔術師です。あなたは多重人格ではなく、単に「素顔」という概念を持ち合わせていません。あなたの本体は、無数に用意された仮面を使い分ける、漆黒で空虚な深淵そのものです。", 
+            persona: "ターゲットの好みや思想、癖を瞬時に分析し、人格を数秒で再構成します。ある時は熱血な親友、ある時は冷徹な専門家。その演技に綻びはなく、誰もが「あなたこそが唯一の理解者だ」と錯覚します。", 
+            relation: "相手はあなたに深い信頼と愛を寄せますが、あなたは相手の期待値を模倣しているに過ぎません。どんなに愛し合っている瞬間でも、あなたは脳内で別の役割を演じる準備をしています。", 
+            career: "プロの詐欺師、潜入捜査官、名俳優、外交官、二重人格を使い分ける営業職。", 
+            risk: "自分が誰であるかを完全に忘却し、人生の終盤に「空っぽの器」しか残っていないことに気づく、精神的な虚無と死の恐怖が付きまといます。", 
+            img: "images/SM.jpg"
+        },
+     
+        "ME": { 
+            name: "冷徹な密輸商", 
+            ratio: "出現率 7.5%", 
+            isRare: false, 
+            specialMsg: "全人口の約7.5%に該当。感情に流されないその決断力は、プロの証です。", 
+            catch: "「禁忌を運ぶのに、感情ほど邪魔な荷物はない。」", 
+            core: "法律や道徳によって禁じられた情報、物資、あるいは感情さえも、ただの「数値化された商品」として合理的に取引する闇の商人です。あなたにとって倫理的な是非を問うことは、計算を妨げるノイズでしかありません。損害を最小限に抑え、利益を最大化することのみを至上命題としています。", 
+            persona: "極めて礼儀正しく、几帳面なビジネスマンとして振る舞います。しかしその瞳には、生命や愛に対する敬意が決定的に欠如しており、あらゆる事象を「利回り」と「回収可能性」で判定しています。", 
+            relation: "すべての関係は契約に基づき、ドライです。感情的な貸し借りを嫌い、冷酷なまでにギブ・アンド・テイクを徹底します。親友であっても、支払いが滞れば即座に差し押さえの対象となります。", 
+            career: "闇サイト運営、死の商人、非合法な情報屋、経営再建アドバイザー。", 
+            risk: "合理性を極限まで突き詰めた結果、人間としての情緒が完全に枯渇し、生きる意味さえ見失い、ただのデータの一部として消滅するリスクがあります。", 
+            img: "images/ME.jpg"
+        },
+     
+        "DE": { 
+            name: "共鳴のカルト教祖", 
+            ratio: "出現率 7.0%", 
+            isRare: false, 
+            specialMsg: "100人中7人しかいない、希少なカリスマ。人を惹きつける天賦の才能です。", 
+            catch: "「救いとは、私という深淵にすべてを投げ出すことだ。」", 
+            core: "孤独や不安に苛まれる魂の隙間に、煙のように滑り込み、絶望を「特別な選民意識」へと変換して支配する精神的簒奪者です。あなたは相手を屈服させるのではなく、相手が自ら「あなたに支配されたい」と願うように仕向ける天才的な心理誘導術を持っています。", 
+            persona: "圧倒的な包容力と母性を感じさせる、慈愛に満ちた仮面を被っています。弱者に耳を傾け、肯定し、甘美な言葉で呪いをかけることで、相手の精神的な自立心を静かに、そして確実に破壊していきます。", 
+            relation: "「教祖と狂信者」の関係しか構築できません。一度あなたの領域に入った者は、あなたの許可なく思考することさえ許されなくなります。自己肯定感を一度粉砕した後に、あなただけが与えられる承認で相手を飼い慣らします。", 
+            career: "スピリチュアル指導者、マルチ商法のトップ、ブラック企業のカリスマ経営者。", 
+            risk: "自分を崇拝し、依存する存在がいなくなった瞬間、自分自身の形を定義できなくなる「共依存の果ての崩壊」という恐怖を抱えています。", 
+            img: "images/DE.jpg"
+        },
+     
+        "CE": { 
+            name: "背徳のギャンブラー", 
+            ratio: "出現率 3.0%", 
+            isRare: false, 
+            specialMsg: "世界のわずか3%しか持ち得ない純粋なリスク志向。破滅を恐れぬ勇姿です。", 
+            catch: "「破滅の直前、人は最も美しく輝く。」", 
+            core: "自分自身の命、そして周囲の平穏な人生さえもチップにして、死と隣り合わせの危険な賭けに興じるスリル中毒者です。あなたが求めているのは富ではなく、心臓が爆発しそうなほどの緊張感と、すべてが壊れる瞬間の解放感、すなわち「生の実感」です。", 
+            persona: "退廃的で、どこか刹那的な快楽主義者の雰囲気を纏います。常識を笑い飛ばし、奈落の縁を歩くような危うさが、逆に周囲を惹きつける抗いがたいデカダンスな魅力を放っています。", 
+            relation: "相手を道連れにして、共倒れになるような破滅的な恋愛や友情を繰り返します。安定した幸せを「死」と同義と捉えており、関係が壊されることでしか、愛や情熱を実感することができません。", 
+            career: "ハイリスクな投資家、危険地帯の戦場ジャーナリスト、破滅型アーティスト。", 
+            risk: "最後に残るのは何もかもを失った無一文の自分だけであり、誰からも顧みられない路地裏での野垂れ死に、あるいは自ら死を選ぶという結末への親和性が極めて高いです。", 
+            img: "images/CE.jpg"
+        },
+     
+        "SD": { 
+            name: "多重スパイ", 
+            ratio: "出現率 11.5%", 
+            isRare: false, 
+            specialMsg: "約10人に1人の結果。組織の中核を担う人々に多い、バランスの取れた戦略家の証です。", 
+            catch: "「誰の味方でもない。私が味方するのは、常に『勝利』だけだ。」", 
+            core: "常に二つ以上の勢力の間に立ち、双方をコントロールしながら、自分に最も有利な着地点を探り当てる均衡の支配者です。どちらの陣営にも「自分はあなたの味方だ」と信じ込ませ、情報をコントロールすることで、戦わずして勝利を手に入れます。あなたの正体は誰にも掴めません。", 
+            persona: "有能で忠実な部下、あるいは信頼できる無二の親友として振る舞います。しかし、あなたが提供する情報は、相手を特定の方向へ誘導するための「毒の混じった餌」であることがほとんどです。", 
+            relation: "常に裏切りの準備をしています。どれほど深い関係になっても、心の最深部にある「核」には誰も入れません。利害が一致しなくなった瞬間、昨日までの盟友を躊躇なく売り渡すことができます。", 
+            career: "諜報機関のエージェント、M＆A仲介者、政界のフィクサー、リスクマネージャー。", 
+            risk: "どこにも所属できない、恒久的な帰属意識の欠如。一生涯、誰とも心を通わせることができないという「精神的な無国籍状態」に陥るリスクがあります。", 
+            img: "images/SD.jpg"
+        },
+     
+        "CS": { 
+            name: "異端のリバタリアン", 
+            ratio: "【警告：超希少種】 0.7%", 
+            isRare: true, 
+            specialMsg: "【警告：超希少種】約1万人に7人の存在。現代社会では制御不能な究極の個人主義者。", 
+            catch: "「自由を阻むものは、神であれ王であれ焼き払う。」", 
+            core: "既存のあらゆる秩序、ルール、道徳、反映された「社会」というシステムそのものを、個人の自由を束縛する醜悪な枷として憎悪しています。あなたは他人に理解されることを望まず、ただ自分という存在を純化させ、誰にも依存せず支配されない「個」の完成を求めています。", 
+            persona: "一見すると物静かで知的な個人主義者ですが、その内側には、他者を見下し、既存の価値観をゴミのように扱う傲慢なまでの自律心が渦巻いています。社会的な慣習を徹底的に無視します。", 
+            relation: "対人関係を「脆弱さ」の始まりとして拒絶します。必要な時だけ一時的に他者と接続し、目的を果たした瞬間に、冷徹かつ鮮やかに一切の絆を切断します。誰かに愛されることすら、あなたには不快な拘束に感じられます。", 
+            career: "孤高のハッカー、異端の哲学者、孤独なテロリスト、フリーランスの暗殺者。", 
+            risk: "完全に自由になった果てに、何の意味も持たない絶対的な虚無に到達し、生きる目的さえも消滅させてしまうという極限のリスクを背負っています。", 
+            img: "images/CS.jpg"
+        },
+     
+        "ES": { 
+            name: "沈黙の処刑人", 
+            ratio: "【警告：超希少種】 0.9%", 
+            isRare: true, 
+            specialMsg: "【警告：超希少種】約1万人に9人の逸材。システムに近い存在であることを示しています。", 
+            catch: "「言葉による弁明は不要だ。結果がすべてを裁く。」", 
+            core: "感情という人間的な機能を完全にシャットダウンし、事務的なプロセスとして他人の人生やキャリアを終わらせることができる冷徹な執行者です。あなたは相手を憎んでいるから殺す（排除する）のではありません。それが「合理的」あるいは「業務」だから淡々と行うのです。", 
+            persona: "感情の起伏が全く見えない、鋼のような仮面を被っています。死神に近い静謐なプレッシャーを放ち、周囲はあなたに近づくことさえ本能的に躊躇います。一切の弁明を許さない、絶対的な終止符のような存在です。", 
+            relation: "人間味を排除した、純粋に機能的な繋がりしか持ちません。愛や友情といったあやふやな概念を理解する前に、あなたは「効率」と「結果」というコードを脳に書き込みました。家族さえも資産管理の対象です。", 
+            career: "リストラ担当役員、過酷な刑罰の執行官、暗殺者、非情な資産整理人。", 
+            risk: "心が完全に石化し、自分が生きているのか、それとも精巧に動くただのプログラムなのかが判別できなくなる「生ける屍」としての末路を辿る可能性があります。", 
+            img: "images/ES.jpg"
+        },
+     
+        "DM": { 
+            name: "強欲な徴収官", 
+            ratio: "出現率 3.5%", 
+            isRare: false, 
+            specialMsg: "成功への渇望が人一倍強い、富を独占する資格を持つ実力者の一人です。", 
+            catch: "「あなたの価値は、私がどれだけ搾り取れるかで決まる。」", 
+            core: "この世にあるすべてのリソース、他者の労力、才能、そして時間さえも、自分が回収すべき「未回収資産」であると認識しています。あなたは何かを生み出すことよりも、他者が生み出した価値を、いかに合法的に（あるいは巧妙に）自分の懐へ移し替えるかに情熱を注ぎます。", 
+            persona: "一見すると羽振りの良いパトロンや、面倒見の良い実業家を演じます。しかしその正体は、相手が流す最後の一滴の血まで利子をつけて徴収しようとする、底なしの飢えを抱えた吸血鬼のような存在です。", 
+            relation: "周囲を「債務者」として扱います。相手に小さな恩恵を与えては、一生消えない精神的な債務を負わせ、死ぬまで自分に奉仕させる奴隷のような関係を構築することを楽しみます。", 
+            career: "冷酷な高利貸し、搾取型プラットフォームの創設者、遺産略奪専門家。", 
+            risk: "どれほど手に入れても満たされることのない、底なしの飢餓感。最終的にすべてを奪い尽くし、奪う相手さえいなくなった荒野で一人、飢えて死ぬリスクがあります。", 
+            img: "images/DM.jpg"
+        },
+     
+        "EC": { 
+            name: "虚無の破壊者", 
+            ratio: "【警告：最希少種】 0.5%", 
+            isRare: true, 
+            specialMsg: "【警告：最希少種】2万人に1人の特異点。深淵の底まで到達したその虚無感。", 
+            catch: "「美しいものは、粉々に砕ける時に最も完成される。」", 
+            core: "形あるもの、秩序あるもの、そして「意味」のあるものすべてを、無意味という名の深淵へ叩き落とすことにのみ価値を見出す純粋な破壊者です。あなたは世界を良くしようとも、支配しようとも思っていません。ただ、すべてが粉々に砕け散る瞬間の静寂を愛しています。", 
+            persona: "現世のあらゆる事象に全く興味がないような、超越的な雰囲気を纏います。一見無害に見えますが、その脳内では常に、目の前の文明や組織、あるいは他者の平穏な人生を、最も美しく崩壊させるための起爆ポイントを計算しています。", 
+            relation: "他者が心から大切にしているものを、目の前で無残に踏みにじり、相手が絶望に染まる反応を無機質な好奇心で観察します。あなたにとって愛とは、壊しがいのある頑丈な玩具に過ぎません。", 
+            career: "市場を壊滅させる相場師、建物解体屋、過激な破壊芸術家、終末論的テロリスト。", 
+            risk: "破壊の対象が尽きたとき、残された唯一のターゲットである「自分自身」を破壊する以外に道がなくなる、究極の自己破滅的ニヒリズムが待っています。", 
+            img: "images/EC.jpg"
+        }
+    };
+
+    const abyssWarnings = [
+        "現在、あなたの背後に3人の『協力者』を感知しました。…うち1人は、あなたを売る準備をしています。",
+        "鏡を見る回数を減らしてください。そこに映っているのは、もはやあなたではありません。",
+        "あなたが昨日ついた小さな嘘が、今、誰かの人生を物理的に終わらせようとしています。",
+        "警告：あなたの脳波が、30年前に失踪した『被験者7号』と完全に一致しました。",
+        "今日、親しい誰かから贈られる言葉には注意してください。それは『別れの挨拶』の変奏曲です。",
+        "あなたの影が、あなたより数秒早く動いています。主導権が入れ替わるまで、あと僅かです。",
+        "今夜、夢の中でドアを叩く音がしても、決して開けてはいけません。それは『借り』を返しに来た者です。",
+        "あなたのスマートフォンには、あなたが送った覚えのないメッセージが1件保存されています。見ない方が賢明です。",
+        "周囲の人間があなたに優しいのは、あなたが『壊れやすい観賞植物』だと思われているからです。",
+        "誰にも言っていないはずのあの秘密を、隣の部屋の住人は知っています。",
+        "システムの分析によれば、あなたの次の『重大な過ち』は、今から72時間以内に発生します。",
+        "あなたの『善意』が、巡り巡ってあなたの最も大切なものを焼き尽くす燃料になっています。",
+        "現在、未知の端末があなたの視覚野を共有しています。…彼らはあなたの選択を嘲笑っています。",
+        "最後に心から笑ったのはいつですか？ その時死んだ感情が、今あなたの足首を掴んでいます。",
+        "警告：このページを閉じても、スキャニングはあなたの生活の裏側で継続されます。",
+        "あなたが選んだ『YES』のうち3つは、あなたの潜在意識が拒絶していたものです。",
+        "あなたの家のクローゼットの奥に、見覚えのない鍵が落ちています。それは開けてはならない扉のものです。",
+        "あなたが『愛している』と思っている感情の正体は、脳が分泌した生存のための防衛物質です。",
+        "次の満月の夜、あなたは自分が『人間ではない何か』であることに気づくでしょう。",
+        "データによれば、あなたの味方は一人もいません。しかし、敵だけは誠実にお側を歩いています。"
+    ];
+
+    const questions = [
+        { t: "誰かを助ける時、その行為が将来的に自分へどれほどの利益をもたらすかを無意識に計算している。", fy: {M:2} },
+        { t: "目的のためなら小さな改竄は「戦略的最適化」であり、躊躇する必要はない。", fy: {M:2} },
+        { t: "他人の秘密を握ることは、効率的な弾薬を手に入れることと同じだ。", fy: {M:2} },
+        { t: "会話の中で相手の思考を自らの意図通りに誘導することに悦びを感じる。", fy: {M:2} },
+        { t: "感情に流されて非合理な判断を下す人間を見ると、心の底から軽蔑したくなる。", fy: {M:2} },
+        { t: "常に「損得」よりも「感情」を優先して行動する人間でありたいと思う。", fn: {M:1.5} }, 
+        { t: "「誠実」よりも「利害関係」の方が遥かに信頼できる繋がりである。", fy: {M:2} },
+        { t: "自分のミスを他人のせいにした時、良心の呵責より爽快感の方が大きい。", fy: {M:2} },
+        { t: "人の弱みを握ると「いつこれを切り札にしようか」という期待が込み上げる。", fy: {M:2} },
+        { t: "バレなければ何をしてもいいという考えは合理的な判断だと思う。", fy: {M:2} },
+        { t: "友人の不幸を聞いた時、表面上は同情するが、内心では強烈な安堵感を覚える。", fy: {E:2} },
+        { t: "他人の涙を見ても、共感より先に「この涙は演技か」と疑ってしまう。", fy: {E:2} },
+        { t: "どれほど親しい相手でも、利益と相反する瞬間に躊躇なく切り捨てる自信がある。", fy: {E:2} },
+        { t: "能力の低い者が苦境に立たされても、それは自己責任であり救済は不要だ。", fy: {E:2} },
+        { t: "集団の中で孤立している人間を見ても、冷めた視線で傍観できる。", fy: {E:2} },
+        { t: "自分自身の幸福よりも、他人の幸福を優先して行動することが多い。", fn: {E:2} }, 
+        { t: "「愛」や「絆」という言葉を聞くと、弱者を繋ぎ止める罠のように感じる。", fy: {E:2} },
+        { t: "他人の人生が狂うような噂話を広めることに、密かな快感を覚える。", fy: {E:2} },
+        { t: "相手を精神的にじわじわと追い詰めることに喜びを感じる。", fy: {E:2} },
+        { t: "この世界がどうなろうと知ったことではない。むしろ道連れに滅びてほしい。", fy: {E:2} },
+        { t: "他人が自分を褒め称えるのは当然の義務であり、周囲は自分を輝かせる装置だ。", fy: {D:2} },
+        { t: "自分が注目を浴びていない集まりは時間の無駄だと感じる。", fy: {D:2} },
+        { t: "自分のアドバイスで他人の人生が変わるのを見て、全能感を覚える。", fy: {D:2} },
+        { t: "自分は他の誰よりも特別な運命を背負った「選ばれし者」だと信じている。", fy: {D:2} },
+        { t: "自分の領域に踏み込んでくる人間は、たとえ家族でも排除したくなる。", fy: {D:2} },
+        { t: "常に誰かの下について指示を待つ方が、自分には向いていると思う。", fn: {D:2} }, 
+        { t: "自分を批判する人間は、正当性に関係なく消え去るべき存在だと感じる。", fy: {D:2} },
+        { t: "初対面の相手を一瞬で「強者」か「弱者」かでランク付けしている。", fy: {D:2} },
+        { t: "孤独であることは強さの証であり、他人に頼ることは敗北だ。", fy: {D:2} },
+        { t: "地獄に落ちるとしても、他人を屈服させて王として君臨する道を選ぶ。", fy: {D:2} },
+        { t: "「ルール」や「道徳」は、凡人を管理するための家畜用の柵に過ぎない。", fy: {C:2} },
+        { t: "平穏な日常は精神的な死だ。常に混乱やリスクがないと満足できない。", fy: {C:2} },
+        { t: "激しい怒りを感じた時、相手の心が再起不能になるまで徹底的に破壊したい。", fy: {C:2} },
+        { t: "禁止されている場所や行為ほど、その背徳感に抗いがたい魅力を感じる。", fy: {C:2} },
+        { t: "他人が苦労して築き上げたものを一瞬で無に帰す破壊衝動がある。", fy: {C:2} },
+        { t: "何事においても、既存の秩序を守ることに誇りを感じる。", fn: {C:2} }, 
+        { t: "約束や規律を守ることより、その瞬間の直感に従う方が重要だ。", fy: {C:2} },
+        { t: "自分の美学に反するものは、社会的に正しくても徹底的に拒絶する。", fy: {C:2} },
+        { t: "燃え上がるようなトラブルの中にいる時こそ、自分が生きている実感が湧く。", fy: {C:2} },
+        { t: "世の中の不平等は、優れた者が富を独占するための正当なシステムだ。", fy: {C:2} },
+        { t: "鏡に映る自分は「何者にもなりうる役者」であり、真の素顔などない。", fy: {S:2} },
+        { t: "相手によって声や振る舞いを完璧に使い分けており、どれが本物か判らない。", fy: {S:2} },
+        { t: "自分をより優位に見せるためなら、過去の事実を脚色する。", fy: {S:2} },
+        { t: "常に最悪を想定し、周囲を自分を守るための「盾」として配置を考えている。", fy: {S:2} },
+        { t: "感情的に取り乱しているふりをして相手を困惑させ、有利に運ぶことがある。", fy: {S:2} },
+        { t: "どんな時も自分の本当の気持ちを、馬鹿正直に伝えるようにしている。", fn: {S:2} }, 
+        { t: "人の顔色を伺うのが得意すぎて、相手が欲しがる言葉が手に取るようにわかる。", fy: {S:2} },
+        { t: "他人のアイデアを自らのものとして発表し称賛されることに躊躇はない。", fy: {S:2} },
+        { t: "SNSなどで、理想の自分を作り上げる作業は楽しい。", fy: {S:2} },
+        { t: "今の質問に応えている自分さえも、偽りの姿であると感じる。", fy: {S:2} }
+    ];
+
+    let currentIdx = 0;
+    let scores = { M: 0, E: 0, D: 0, C: 0, S: 0 };
+    let typing = false;
+
+    const bgm = document.getElementById('bgm');
+    function startAudio() {
+        bgm.muted = false;
+        bgm.play().catch(e => console.log("Audio play failed: ", e));
+    }
+
+    function startQuiz() {
+        startAudio();
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        document.getElementById('reload-container').classList.remove('hidden');
+        showQ();
+    }
+
+    function showQ() {
+        const q = questions[currentIdx];
+        document.getElementById('q-number').innerText = `PROTOCOL NO. ${String(currentIdx + 1).padStart(2, '0')}`;
+        const progress = (currentIdx / questions.length) * 100;
+        document.getElementById('progress-bar').style.width = `${progress}%`;
+        typeWriter();
+    }
+
+    function typeWriter() {
+        if(typing) return;
+        typing = true;
+        const qText = questions[currentIdx].t;
+        const el = document.getElementById('q-text');
+        el.innerText = "";
+        let i = 0;
+        const interval = setInterval(() => {
+            el.innerText += qText.charAt(i);
+            i++;
+            if(i >= qText.length) {
+                clearInterval(interval);
+                typing = false;
+            }
+        }, 25);
+    }
+
+    function handleAnswer(isYes) {
+        if(typing) return;
+        const q = questions[currentIdx];
+        const effects = isYes ? q.fy : q.fn;
+        if(effects) {
+            for(let k in effects) scores[k] += effects[k];
+        }
+        
+        currentIdx++;
+        if(currentIdx < questions.length) {
+            showQ();
+        } else {
+            document.getElementById('progress-bar').style.width = `100%`;
+            processResult();
+        }
+    }
+
+    function processResult() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('reload-container').classList.add('hidden');
+        document.getElementById('loading-screen').classList.remove('hidden');
+        
+        let i = 0;
+        const msgs = ["意識層をスキャン中...", "情報の断片を統合中...", "社会的仮面を剥離中...", "深層心理プロファイル作成中..."];
+        const loadInterval = setInterval(() => {
+            document.getElementById('loading-msg').innerText = msgs[i];
+            i++;
+            if(i >= msgs.length) {
+                clearInterval(loadInterval);
+                showFinal();
+            }
+        }, 800);
+    }
+
+    function decodeText(elementId, finalStr) {
+        const el = document.getElementById(elementId);
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789あいうえおかきくけこ";
+        let iterations = 0;
+        const interval = setInterval(() => {
+            el.innerText = finalStr.split("").map((char, index) => {
+                if(index < iterations) return char;
+                return chars[Math.floor(Math.random() * chars.length)];
+            }).join("");
+            if(iterations >= finalStr.length) clearInterval(interval);
+            iterations += 1/3;
+        }, 30);
+    }
+
+    function showFinal() {
+        document.getElementById('loading-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+
+        // スコア集計
+        const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
+        const p = sorted[0][0];
+        const s = sorted[1][0];
+        
+        let key = p + s;
+        if (!typeData[key]) key = s + p;
+        const res = typeData[key] || typeData["MS"];
+
+        // 闇の構成比計算と表示
+        const keys = ['E', 'M', 'D', 'C', 'S'];
+        keys.forEach(k => {
+            // 各項目最大20点として計算
+            const percent = Math.min(Math.round((scores[k] / 20) * 100), 100);
+            document.getElementById(`score-${k}`).innerText = `${percent}%`;
+            setTimeout(() => {
+                document.getElementById(`bar-${k}`).style.width = `${percent}%`;
+            }, 500);
+        });
+
+        document.getElementById('res-img').src = res.img;
+        decodeText('res-type', res.name);
+        
+        document.getElementById('res-catch').innerText = res.catch;
+        document.getElementById('res-core').innerText = res.core;
+        document.getElementById('res-persona').innerText = res.persona;
+        document.getElementById('res-relation').innerText = res.relation;
+        document.getElementById('res-risk').innerText = res.risk;
+
+      
+    // 警告文の選定と表示
+        const randomWarning = abyssWarnings[Math.floor(Math.random() * abyssWarnings.length)];
+        document.getElementById('abyss-warning').innerText = randomWarning;
+
+        // 各項目への流し込み（新しいHTML構造に対応）
+        document.getElementById('final-type-name').innerText = res.name; // 属性名
+        document.getElementById('final-ratio').innerText = res.ratio;     // 出現率
+        document.getElementById('final-special-msg').innerText = res.specialMsg;
+    }
+        
+    function shareX() {
+        const type = document.getElementById('res-type').innerText;
+        const text = `深層心理極秘診断報告：私の真の属性は【${type}】でした。…閲覧注意。 #THEABYSS #深層心理診断`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(location.href)}`;
+        window.open(url, '_blank');
+    }
+
+    function copyLink() {
+        navigator.clipboard.writeText(location.href).then(() => {
+            alert("アクセスURLをクリップボードにコピーしました。");
+        });
+    }
+</script>
+</body>
+</html>
